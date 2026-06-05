@@ -48,17 +48,10 @@ def setup_window() -> None:
 
     info = pygame.display.Info()
 
-    screen = pygame.display.set_mode((
-        info.current_w, info.current_h
-    ), pygame.FULLSCREEN)
-    pygame.display.set_caption("Pac-Man")
+    screen = 'P'
 
     return screen, fonts, info.current_w, info.current_h
 
-def move(screen, pacman_x, pacman_y, pacman_direction, new_direction):
-    
-    if screen.get_at(pacman_x, pacman_y) == (0, 255, 255):
-        ...
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -68,7 +61,8 @@ if __name__ == "__main__":
     clock = pygame.time.Clock()
     maze_data = Maze(sys.argv[1])
     maze_data.place_pacgums()
-    screen, fonts, SCREEN_W, SCREEN_H = setup_window()
+    s, fonts, SCREEN_W, SCREEN_H = setup_window()
+    screen = maze_data.constants.screen
     WIDTH = len(maze_data.maze[0])
     HEIGHT = len(maze_data.maze)
     CELL_SIZE = max(
@@ -87,7 +81,8 @@ if __name__ == "__main__":
     # scores.sort(key=lambda x: x['score'], reverse=True)
 
     # creates the window
-    
+    booster = False
+    stopper = False
     main_mode = MainMenu(screen, fonts, {})
     playing = PlayingScreen(screen, CELL_SIZE)
     pause = PauseMenu(screen, fonts)
@@ -101,15 +96,12 @@ if __name__ == "__main__":
     cx, cy = maze_data.clyde.current_location
     ix, iy = maze_data.inky.current_location
     px, py = maze_data.pinky.current_location
-    PACMAN_X, PACMAN_Y = START_X + x * CELL_SIZE, START_Y + y * CELL_SIZE
-    pacman_x, pacman_y = PACMAN_X, PACMAN_Y
     blinky_x, blinky_y = START_X + bx * CELL_SIZE, START_Y + by * CELL_SIZE
     inky_x, inky_y = START_X + ix * CELL_SIZE, START_Y + iy * CELL_SIZE
     pinky_x, pinky_y = START_X + px * CELL_SIZE, START_Y + py * CELL_SIZE
     clyde_x, clyde_y = START_X + cx * CELL_SIZE, START_Y + cy * CELL_SIZE
     speed = CELL_SIZE // 15
     ghost_speed = CELL_SIZE // 11
-    print(f"Blinky: {blinky_x, blinky_y}      Inky: {inky_x, inky_y}")
     blinky_distance = 0
     inky_distance = 0
     pinky_distance = 0
@@ -119,7 +111,7 @@ if __name__ == "__main__":
     running = True
     while running:
         if frames % 6 == 0:
-            pacman.change_frame()
+            maze_data.pacman.next_frame()
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 # --- GLOBAL NAVIGATION ---
@@ -149,8 +141,6 @@ if __name__ == "__main__":
                         if pause.selected_index == 0:  # RESUME
                             current_state = "PLAYING"
                         else:  # RETURN TO MENU
-                            pacman_x = PACMAN_X
-                            pacman_y = PACMAN_Y
                             current_state = "MENU"
 
                 # --- OTHER STATES ---
@@ -161,14 +151,19 @@ if __name__ == "__main__":
                         current_state = "INSTRUCTIONS"
                 
                 if current_state == 'PLAYING':
-                    if event.key == pygame.K_UP:
+                    if event.key == pygame.K_UP or event.key == pygame.K_w:
                         CURRENT_DIRECTION = 'N'
-                    if event.key == pygame.K_DOWN:
+                    if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                         CURRENT_DIRECTION = 'S'
-                    if event.key == pygame.K_LEFT:
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_a:
                         CURRENT_DIRECTION = 'W'
-                    if event.key == pygame.K_RIGHT:
+                    if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                         CURRENT_DIRECTION = 'E'
+                    if event.key == pygame.K_p:
+                        stopper = not stopper
+                    if event.key == pygame.K_b:
+                        booster = not booster
+                    
 
         keys = pygame.key.get_pressed()
 
@@ -187,30 +182,18 @@ if __name__ == "__main__":
             main_mode.instructions()
         elif current_state == "PLAYING":
             playing.draw_maze(maze_data.maze, maze_data.pacgums_eaten)
-            pacman.draw(screen, pacman_x, pacman_y)
-            ghosts.blinky.change_mode()
-            ghosts.inky.change_mode()
-            ghosts.pinky.change_mode()
-            ghosts.clyde.change_mode()
-            if blinky_distance == 0:
-                maze_data.blinky.move(maze_data.maze, maze_data.pacman.current_location)
-            if pinky_distance == 0:
-                maze_data.pinky.move(maze_data.maze, maze_data.pacman.current_location)
-            if inky_distance == 0:
-                maze_data.inky.move(maze_data.maze, maze_data.pacman.current_location)
-            if clyde_distance == 0:
-                maze_data.clyde.move(maze_data.maze, maze_data.pacman.current_location)
-            if pacman.collision(ghosts, [(pacman_x, pacman_y), (blinky_x, blinky_y), (inky_x, inky_y), (pinky_x, pinky_y), (clyde_x, clyde_y)], START_X, START_Y):
-                sleep(5)
-            ghosts.draw_blinky(screen, blinky_x, blinky_y)
-            ghosts.draw_pinky(screen, pinky_x, pinky_y)
-            ghosts.draw_inky(screen, inky_x, inky_y)
-            ghosts.draw_clyde(screen, clyde_x, clyde_y)
-            blinky_x, blinky_y, blinky_distance = ghosts.move_blinky(blinky_x, blinky_y, blinky_distance, ghost_speed)
-            pinky_x, pinky_y, pinky_distance = ghosts.move_pinky(pinky_x, pinky_y, pinky_distance, ghost_speed)
-            inky_x, inky_y, inky_distance = ghosts.move_inky(inky_x, inky_y, inky_distance, ghost_speed)
-            clyde_x, clyde_y, clyde_distance = ghosts.move_clyde(clyde_x, clyde_y, clyde_distance, ghost_speed)
-            pacman_x, pacman_y, distance_completed = pacman.move(pacman_x, pacman_y, distance_completed, speed, CURRENT_DIRECTION, maze_data.maze)
+            maze_data.pacman.draw(screen)
+            maze_data.blinky.draw(screen)
+            maze_data.inky.draw(screen)
+            maze_data.pinky.draw(screen)
+            maze_data.clyde.draw(screen)
+            if maze_data.collision():
+                print('Collision')
+            maze_data.blinky.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
+            maze_data.inky.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
+            maze_data.pinky.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
+            maze_data.clyde.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
+            maze_data.pacman.pixel_move(CURRENT_DIRECTION, booster, screen, maze_data.maze)
             x, y = maze_data.pacman.current_location
             blx, bly = ghosts.blinky.current_location
             draw_text(screen, f'x: {blx}. y: {bly}', 0, SCREEN_H - 100)

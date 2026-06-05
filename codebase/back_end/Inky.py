@@ -1,5 +1,7 @@
 from codebase.back_end.Ghost import Ghost
 from codebase.back_end.PacMan import PacMan
+from codebase.back_end.Maze import Constants
+import pygame
 
 
 class Inky(Ghost):
@@ -26,11 +28,22 @@ class Inky(Ghost):
         current_lovation (tuple[int, int]): The current location of Inky 
         direction (str): The direction the ghost if facing
     """
-    def __init__(self, origin: tuple[int, int]) -> None:
+    def __init__(self, origin: tuple[int, int], constants: Constants) -> None:
         super().__init__()
         self.origin = origin
         self.current_location = self.origin
         self.direction = 'E'
+        x, y = self.current_location
+        self.cell_size = constants.cell_size
+        self.inky_x = constants.start_x + x * constants.cell_size
+        self.inky_y = constants.start_y + y * constants.cell_size
+        self.inky_img = pygame.image.load('assets/ghost_images/blue.png').convert_alpha()
+        self.inky_img = pygame.transform.scale(self.inky_img, (constants.cell_size - 2, constants.cell_size - 2))
+        self.inky_mask = pygame.mask.from_surface(self.inky_img)
+        self.distance_completed = 0
+        self.speed = constants.cell_size // 10
+        self.speed_dead = constants.cell_size // 3
+        self.speed_frightened = constants.cell_size // 16
 
     def calculate_target(
             pacman: PacMan,
@@ -84,3 +97,49 @@ class Inky(Ghost):
         direction = self.choose_the_path(target, current_cell, len(maze), len(maze[0]))
 
         self.offset(direction)
+
+    def draw(self, screen: pygame.Surface) -> None:
+        screen.blit(self.inky_img, (self.inky_x, self.inky_y))
+
+    def get_speed(self, stopper: bool) -> None:
+        if stopper:
+            return 0
+        elif self.origin_mode:
+            return self.speed_dead
+        elif self.frightened_mode:
+            return self.speed_frightened
+        else:
+            return self.speed 
+
+    def pixel_move(
+        self,
+        stopper: bool,
+        screen: pygame.Surface,
+        maze: list[list[int]],
+        pacman_location: tuple[int, int]
+    ):
+        if stopper:
+            return
+        if self.distance_completed == 0:
+            self.move(maze, pacman_location)
+        if self.distance_completed + self.get_speed(stopper) > self.cell_size:
+            speed = self.cell_size - self.distance_completed
+        else:
+            speed = self.get_speed(stopper)
+
+        DIRECTIONS = {
+            'W': (-speed, 0),
+            'E': (speed, 0),
+            'S': (0, speed),
+            'N': (0, -speed)
+        }
+
+        nx, ny = DIRECTIONS[self.direction]
+
+        self.inky_x += nx
+        self.inky_y += ny
+
+        self.distance_completed += speed
+
+        if self.distance_completed >= self.cell_size:
+            self.distance_completed = 0

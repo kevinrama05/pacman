@@ -1,3 +1,6 @@
+import pygame
+from codebase.back_end.Maze import Constants
+
 class PacMan:
     """
     This class is responsible of keeping track of the pacman
@@ -27,7 +30,8 @@ class PacMan:
             points_per_super_pacgum: int,
             points_per_ghost: int,
             lives: int,
-            spawn_point: tuple[int, int]) -> None:
+            spawn_point: tuple[int, int],
+            constants: Constants) -> None:
         self.points_per_pacgum = points_per_pacgum
         self.points_per_super_pacgum = points_per_super_pacgum
         self.points_per_ghost = points_per_ghost
@@ -38,6 +42,26 @@ class PacMan:
         self.super_pacgums = 0
         self.ghosts = 0
         self.direction = 'N'
+        self.frames = {}
+        self.frame = 1
+        self.cell_size = constants.cell_size
+        for i in range(1, 5):
+            f = {}
+            fr = pygame.image.load(f'assets/player_images/{i}.png').convert_alpha()
+            fr = pygame.transform.scale(fr, (constants.cell_size - 2, constants.cell_size - 2))
+            f['N'] = pygame.transform.rotate(fr, 90)
+            f['S'] = pygame.transform.rotate(fr, 270)
+            f['W'] = pygame.transform.rotate(fr, 180)
+            f['E'] = fr
+            f['mask_N'] = pygame.mask.from_surface(f['N'])
+            f['mask_S'] = pygame.mask.from_surface(f['S'])
+            f['mask_W'] = pygame.mask.from_surface(f['W'])
+            f['mask_E'] = pygame.mask.from_surface(f['E'])
+            self.frames[f'frame_{i}'] = f
+        self.pacman_x = constants.start_x + self.current_location[0] * constants.cell_size
+        self.pacman_y = constants.start_y + self.current_location[1] * constants.cell_size
+        self.distance_completed = 0
+        self.pacman_speed = constants.cell_size // 13
 
     def pacgum_eaten(self) -> None:
         """
@@ -136,6 +160,12 @@ class PacMan:
     def change_direction(self, direction: str) -> None:
         self.direction = direction
 
+    def get_speed(self, booster: bool) -> int:
+        if booster:
+            return self.pacman_speed * 2
+        else:
+            return self.pacman_speed
+
     def can_move(self, direction: str, maze: list[list[int]]) -> bool:
         DIRECTIONS = {
             'N': 0,
@@ -157,3 +187,51 @@ class PacMan:
             self.move_right()
         elif direction == 'W':
             self.move_left()
+
+    def draw(self, screen: pygame.Surface) -> None:
+        screen.blit(self.frames[f'frame_{self.frame}'][self.direction], (self.pacman_x, self.pacman_y))
+
+    def next_frame(self) -> None:
+        if self.frame == 4:
+            self.frame = 1
+        else:
+            self.frame += 1
+
+    def pixel_move(
+        self,
+        current_direction: str,
+        booster: bool,
+        screen: pygame.Surface,
+        maze: list[list[int]]
+    ) -> None:
+        if self.distance_completed == 0:
+            if self.can_move(current_direction, maze):
+                self.change_direction(current_direction)
+
+            elif not self.can_move(self.direction, maze):
+                return
+
+        if self.distance_completed + self.get_speed(booster) > self.cell_size:
+            speed = self.cell_size - self.distance_completed
+        else:
+            speed = self.get_speed(booster)
+
+        DIRECTIONS = {
+            'W': (-speed, 0),
+            'E': (speed, 0),
+            'S': (0, speed),
+            'N': (0, -speed)
+        }
+
+        nx, ny = DIRECTIONS[self.direction]
+
+        self.pacman_x += nx
+        self.pacman_y += ny
+
+        self.distance_completed += speed
+
+        if self.distance_completed >= self.cell_size:
+            self.distance_completed = 0
+            self.move(self.direction)
+
+        self.draw(screen)

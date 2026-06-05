@@ -1,11 +1,24 @@
 from mazegenerator.mazegenerator import MazeGenerator as Mg
 from codebase.back_end.config_parser import ParseJSON
-from codebase.back_end.PacMan import PacMan
-from codebase.back_end.Blinky import Blinky
-from codebase.back_end.Inky import Inky
-from codebase.back_end.Pinky import Pinky
-from codebase.back_end.Clyde import Clyde
 import random
+import pygame
+
+
+class Constants:
+    def __init__(self, json: ParseJSON) -> None:
+        self.width = json['width']
+        self.height = json['height']
+        pygame.init()
+        info = pygame.display.Info()
+        self.screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.FULLSCREEN)
+        self.screen_w, self.screen_h = info.current_w, info.current_h
+        self.cell_size = max(
+            2,
+            min(self.screen_w * 3 // 4 // self.width, self.screen_h * 3 // 4 // self.height))
+        if self.cell_size > 80:
+            self.cell_size = 80
+        self.start_x = (self.screen_w - self.width * self.cell_size) // 2
+        self.start_y = (self.screen_h - self.height * self.cell_size) // 2
 
 
 class MazeGenerator(Mg):
@@ -15,6 +28,11 @@ class MazeGenerator(Mg):
         self._create_empty_maze()
         self._add_42_to_maze()
         self._generate_maze(self._entryx, self._entryy, 0)
+from codebase.back_end.PacMan import PacMan
+from codebase.back_end.Blinky import Blinky
+from codebase.back_end.Inky import Inky
+from codebase.back_end.Pinky import Pinky
+from codebase.back_end.Clyde import Clyde
 
 class Maze:
     """
@@ -44,6 +62,7 @@ class Maze:
     """
     def __init__(self, path) -> None:
         self.configs = ParseJSON(path).validate_json()
+        self.constants = Constants(self.configs)
         self.height = self.configs['height']
         self.width = self.configs['width']
         self.maze = MazeGenerator(
@@ -57,12 +76,13 @@ class Maze:
             self.configs['points_per_super_pacgum'],
             self.configs['points_per_ghost'],
             self.configs['lives'],
-            self.pacman_position
+            self.pacman_position,
+            self.constants
         )
-        self.blinky = Blinky((1, 0))
-        self.inky = Inky((self.width - 1, 1))
-        self.pinky = Pinky((self.width - 2, self.height - 1))
-        self.clyde = Clyde((0, self.height - 2))
+        self.blinky = Blinky((1, 0), self.constants)
+        self.inky = Inky((self.width - 1, 1), self.constants)
+        self.pinky = Pinky((self.width - 2, self.height - 1), self.constants)
+        self.clyde = Clyde((0, self.height - 2), self.constants)
         self.pacgums_eaten = {}
         self.levels = self.configs['levels']
         self.current_level = 1
@@ -106,3 +126,6 @@ class Maze:
         self.pacgums_eaten[(self.width - 1, 0)] = False
         self.pacgums_eaten[(self.width - 1, self.height - 1)] = False
         self.pacgums_eaten[(0, self.height - 1)] = False
+
+    def collision(self) -> None:
+        ...
