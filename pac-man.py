@@ -2,11 +2,8 @@ from codebase.back_end.Maze import Maze
 from screen_renders import (
     MainMenu, PlayingScreen,PauseMenu
 )
-from entities import Pacman, Ghosts
-from config_parser import ConfigParser
 import pygame
 import sys
-from time import sleep
 
 def draw_text(
     screen: pygame.Surface,
@@ -36,7 +33,7 @@ def draw_text(
 
 sys.setrecursionlimit(100000)
 CURRENT_DIRECTION = 'N'
-def setup_window() -> None:
+def setup_fonts():
     pygame.init()
     pygame.font.init()
 
@@ -46,11 +43,7 @@ def setup_window() -> None:
         "hint": pygame.font.SysFont("Arial", 40)
     }
 
-    info = pygame.display.Info()
-
-    screen = 'P'
-
-    return screen, fonts, info.current_w, info.current_h
+    return fonts
 
 
 if __name__ == "__main__":
@@ -61,52 +54,17 @@ if __name__ == "__main__":
     clock = pygame.time.Clock()
     maze_data = Maze(sys.argv[1])
     maze_data.place_pacgums()
-    s, fonts, SCREEN_W, SCREEN_H = setup_window()
+    fonts = setup_fonts()
     screen = maze_data.constants.screen
-    WIDTH = len(maze_data.maze[0])
-    HEIGHT = len(maze_data.maze)
-    CELL_SIZE = max(
-        2,
-        min(SCREEN_W * 3 // 4 // WIDTH, SCREEN_H * 3 // 4 // HEIGHT))
-    if CELL_SIZE > 80:
-        CELL_SIZE = 80
-    START_X = (SCREEN_W - WIDTH * CELL_SIZE) // 2 
-    START_Y = ((SCREEN_H - HEIGHT * CELL_SIZE)) // 2 
-
-
-    # sorts the list for top 10 players
-    # cfg = ConfigParser()
-    # config = cfg.parse(sys.argv[1])
-    # scores = config["highscore_filename"]
-    # scores.sort(key=lambda x: x['score'], reverse=True)
 
     # creates the window
     booster = False
     stopper = False
     main_mode = MainMenu(screen, fonts, {})
-    playing = PlayingScreen(screen, CELL_SIZE)
+    playing = PlayingScreen(screen, maze_data.constants.cell_size)
     pause = PauseMenu(screen, fonts)
-    pacman = Pacman(1, 1, maze_data.pacman, CELL_SIZE)
-    ghosts = Ghosts(maze_data, CELL_SIZE)
 
-    current_state = "PLAYING"
-    # game loop and event handler
-    x, y = maze_data.pacman.current_location
-    bx, by = maze_data.blinky.current_location
-    cx, cy = maze_data.clyde.current_location
-    ix, iy = maze_data.inky.current_location
-    px, py = maze_data.pinky.current_location
-    blinky_x, blinky_y = START_X + bx * CELL_SIZE, START_Y + by * CELL_SIZE
-    inky_x, inky_y = START_X + ix * CELL_SIZE, START_Y + iy * CELL_SIZE
-    pinky_x, pinky_y = START_X + px * CELL_SIZE, START_Y + py * CELL_SIZE
-    clyde_x, clyde_y = START_X + cx * CELL_SIZE, START_Y + cy * CELL_SIZE
-    speed = CELL_SIZE // 15
-    ghost_speed = CELL_SIZE // 11
-    blinky_distance = 0
-    inky_distance = 0
-    pinky_distance = 0
-    clyde_distance = 0
-    distance_completed = 0
+    current_state = "MENU"
     frames = 0
     running = True
     while running:
@@ -194,10 +152,6 @@ if __name__ == "__main__":
             maze_data.pinky.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
             maze_data.clyde.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
             maze_data.pacman.pixel_move(CURRENT_DIRECTION, booster, screen, maze_data.maze)
-            x, y = maze_data.pacman.current_location
-            blx, bly = ghosts.blinky.current_location
-            draw_text(screen, f'x: {blx}. y: {bly}', 0, SCREEN_H - 100)
-            draw_text(screen, f"x: {x}, y: {y}", 0, SCREEN_H - 300)
         elif current_state == "PAUSE":
             pause.draw_pausemenu()
         frames += 1
