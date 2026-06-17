@@ -41,7 +41,7 @@ class Clyde(Ghost):
         self.clyde_img = pygame.transform.scale(self.clyde_img, (constants.cell_size - 2, constants.cell_size - 2))
         self.clyde_mask = pygame.mask.from_surface(self.clyde_img)
         self.distance_completed = 0
-        self.speed = constants.cell_size // 10
+        self.speed = constants.cell_size // 12
         self.speed_dead = constants.cell_size // 3
         self.speed_frightened = constants.cell_size // 16
 
@@ -51,12 +51,11 @@ class Clyde(Ghost):
             maze: list[list[int]]
         ) -> None:
         x, y = self.current_location
-        current_cell = maze[y][x]
         distance = abs(x - target_location[0]) + (y - target_location[1])
         if distance > 8:
-            next_move = self.choose_the_path(target_location, current_cell, len(maze), len(maze[0]))
+            next_move = self.bfs_next_direction(target_location, self.current_location, maze, len(maze), len(maze[0]))
         else:
-            next_move = self.choose_the_path(self.origin, current_cell, len(maze), len(maze[0]))
+            next_move = self.bfs_next_direction(self.origin, self.current_location, maze, len(maze), len(maze[0]))
         self.offset(next_move)
 
     def draw(self, screen: pygame.Surface) -> None:

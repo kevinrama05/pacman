@@ -41,7 +41,7 @@ class Inky(Ghost):
         self.inky_img = pygame.transform.scale(self.inky_img, (constants.cell_size - 2, constants.cell_size - 2))
         self.inky_mask = pygame.mask.from_surface(self.inky_img)
         self.distance_completed = 0
-        self.speed = constants.cell_size // 10
+        self.speed = constants.cell_size // 12
         self.speed_dead = constants.cell_size // 3
         self.speed_frightened = constants.cell_size // 16
 
@@ -92,9 +92,9 @@ class Inky(Ghost):
         maze: list[list[int]]) -> None:
         
         target = target_location
-        current_cell = maze[self.current_location[1]][self.current_location[0]]
 
-        direction = self.choose_the_path(target, current_cell, len(maze), len(maze[0]))
+        direction = self.bfs_next_direction(target, self.current_location, maze, len(maze), len(maze[0]))
+
 
         self.offset(direction)
 

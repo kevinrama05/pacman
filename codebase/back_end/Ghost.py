@@ -1,5 +1,7 @@
+from collections import deque
 from abc import ABC, abstractmethod
 from random import choice
+import math
 
 
 class Ghost(ABC):
@@ -39,46 +41,129 @@ class Ghost(ABC):
         else:
             self.scatter_mode = True
 
+    def check_walls(self, current_cell: int) -> list[str]:
+        """
+        This method returns all the walls that are open
+        in the current cell
+
+        Args:
+            current_cell (int): The current cell represented with
+                                a number from 0 to 15
+
+        Returns:
+            list[str]: All the directions where the wall is open
+        """
+        open_walls = []
+        dirs = [(1, "N"), (2, "E"), (4, "S"), (8, "W")]
+
+        for bitmask, label in dirs:
+            # if the result of "AND" operator is 0, the wall is open
+            if (current_cell & bitmask) == 0:
+                open_walls.append(label)
+
+        return open_walls
+
+    def bfs_next_direction(
+        self,
+        target: tuple[int, int],
+        location: tuple[int, int],
+        maze: list[list[int]],
+        height: int,
+        width: int
+    ) -> str:
+        start = (location[1], location[0])
+        end = (target[1], target[0])
+
+        the_path = ""
+        queue = deque([(start, "")])
+        visited = {start}
+        movements = {
+            "N": (-1, 0),  # up one row
+            "E": (0, 1),  # right one column
+            "S": (1, 0),  # down one row
+            "W": (0, -1),  # left one column
+        }
+
+        while queue:
+            (current_row, current_col), current_path = queue.popleft()
+
+            if (current_row, current_col) == end:
+                return current_path[0] if len(current_path) != 0 else self.direction
+
+            cell_value = maze[current_row][current_col]
+            open_walls = self.check_walls(cell_value)
+
+            for wall in open_walls:
+                row_delta, column_delta = movements[wall]
+                new_row = current_row + row_delta
+                new_col = current_col + column_delta
+                coords = (new_row, new_col)
+
+                if 0 <= new_row < height and 0 <= new_col < width:
+                    if coords not in visited:
+                        visited.add(coords)
+                        queue.append(((new_row, new_col), current_path + wall))
+
+        print("The path: " + the_path)
+        return the_path[0] if len(the_path) != 0 else self.opposite_directions[self.direction]
+
+
     def choose_the_path(
             self,
             target_location: tuple[int, int] | None,
             current_cell: int,
             maze_length: int,
             maze_width: int,
-            direction: str | None = None) -> str:
-        directions = {
+            direction: str | None = None,
+            ghost: str | None = None) -> str:
+        DIRECTIONS = {
             'N': (0, -1),
             'E': (1, 0),
             'S': (0, 1),
             'W': (-1, 0)
         }
-        if direction == None:
+
+        PRIORITY_DEFAULT = {'N': 0, 'W': 1, 'S': 2, 'E': 3}
+        PRIORITY_ALT = {'N': 0, 'E': 1, 'S': 2, 'W': 3}
+
+        if direction is None:
             direction = self.direction
-        valid_moves = {}
-        for i, (key, value) in enumerate(directions.items()):
-            if not (current_cell >> i) & 1:
-                if key != self.opposite_directions[direction]:
-                    valid_moves[key] = value
 
-        if target_location != None:
-            distances = {}
-            for key, value in valid_moves.items():
-                x, y = self.current_location
-                nx, ny = value
-                new_x, new_y = x + nx, y + ny
-                if 0 <= new_x < maze_length and 0 <= new_y < maze_width:
-                    pacman_x, pacman_y = target_location
-                    distance = abs(new_x - pacman_x) + abs(new_y - pacman_y)
-                    distances[key] = distance
+        opposite = self.opposite_directions[direction]
 
-            priority = {'N': 0, 'W': 1, 'S': 2, 'E': 3}
+        valid_moves = {
+            key: value
+            for i, (key, value) in enumerate(DIRECTIONS.items())
+            if not (current_cell >> i) & 1 and key != opposite
+        }
 
-            sorted_d = dict(sorted(distances.items(), key=lambda item: (-item[1], -priority[item[0]])))
+        if not valid_moves:
+            return opposite
 
-            return self.opposite_directions[direction] if sorted_d == {} else list(sorted_d.keys())[-1]
-        
-        else:
-            return choice(list(valid_moves.keys())) if valid_moves != {} else self.opposite_directions[direction]
+        if target_location is None:
+            return choice(list(valid_moves.keys()))
+
+        x, y = self.current_location
+        target_x, target_y = target_location
+        priority = PRIORITY_DEFAULT if ghost is None else PRIORITY_ALT
+
+        best_direction = None
+        best_key = None
+
+        for key, (dx, dy) in valid_moves.items():
+            new_x, new_y = x + dx, y + dy
+            if not (0 <= new_x < maze_length and 0 <= new_y < maze_width):
+                continue
+
+            distance = abs(new_x - target_x) + abs(new_y - target_y)
+            sort_key = (distance, priority[key])
+
+            if best_key is None or sort_key < best_key:
+                best_key = sort_key
+                best_direction = key
+
+        return best_direction if best_direction is not None else opposite
+
  
     def enter_frightened_mode(self) -> None:
         """
@@ -134,6 +219,7 @@ class Ghost(ABC):
         target = self.origin
         current_cell = maze[self.current_location[1]][self.current_location[0]]
         direction = self.choose_the_path(target, current_cell, len(maze), len(maze[0]))
+
         self.offset(direction)
 
     def move_frightened(self, maze: list[list[int]]) -> None:

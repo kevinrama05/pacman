@@ -3,6 +3,7 @@ from screen_renders import (
     MainMenu, PlayingScreen,PauseMenu
 )
 import pygame
+from mazegenerator.mazegenerator import MazeGenerator
 import sys
 
 def draw_text(
@@ -45,14 +46,13 @@ def setup_fonts():
 
     return fonts
 
-
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python3 pac-man.py <configfile.json>")
-        sys.exit(1)
+    # if len(sys.argv) != 2:
+    #     print("Usage: python3 pac-man.py <configfile.json>")
+    #     sys.exit(1)
 
     clock = pygame.time.Clock()
-    maze_data = Maze(sys.argv[1])
+    maze_data = Maze("config.json")
     maze_data.place_pacgums()
     fonts = setup_fonts()
     screen = maze_data.constants.screen
@@ -60,12 +60,17 @@ if __name__ == "__main__":
     # creates the window
     booster = False
     stopper = False
+    death = False
+    scatter = True
     main_mode = MainMenu(screen, fonts, {})
     playing = PlayingScreen(screen, maze_data.constants.cell_size)
     pause = PauseMenu(screen, fonts)
 
-    current_state = "MENU"
+    current_state = "PLAYING"
     frames = 0
+    death_frame = 0
+    scatter_duration = 0
+    chase_duration = 0
     running = True
     while running:
         if frames % 6 == 0:
@@ -139,19 +144,55 @@ if __name__ == "__main__":
         elif current_state == "INSTRUCTIONS":
             main_mode.instructions()
         elif current_state == "PLAYING":
-            playing.draw_maze(maze_data.maze, maze_data.pacgums_eaten)
-            maze_data.pacman.draw(screen)
-            maze_data.blinky.draw(screen)
-            maze_data.inky.draw(screen)
-            maze_data.pinky.draw(screen)
-            maze_data.clyde.draw(screen)
-            if maze_data.collision():
-                print('Collision')
-            maze_data.blinky.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
-            maze_data.inky.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
-            maze_data.pinky.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
-            maze_data.clyde.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
-            maze_data.pacman.pixel_move(CURRENT_DIRECTION, booster, screen, maze_data.maze)
+            if death:
+                if death_frame == 90:
+                    death = False
+                    death_frame = 0
+                    maze_data.reset()
+                else:
+                    death_frame += 1
+            else:
+                playing.draw_maze(maze_data.maze, maze_data.pacgums_eaten)
+                maze_data.pacman.draw(screen)
+                maze_data.blinky.draw(screen)
+                maze_data.inky.draw(screen)
+                maze_data.pinky.draw(screen)
+                maze_data.clyde.draw(screen)
+                if maze_data.collision():
+                    death = True
+                    scatter = True
+                    scatter_duration = 0
+                    chase_duration = 0
+                    if maze_data.blinky.scatter_mode == False:
+                        maze_data.blinky.change_mode()
+                        maze_data.pinky.change_mode()
+                        maze_data.inky.change_mode()
+                        maze_data.clyde.change_mode()
+                if scatter:
+                    if scatter_duration == 360:
+                        maze_data.blinky.change_mode()
+                        maze_data.pinky.change_mode()
+                        maze_data.inky.change_mode()
+                        maze_data.clyde.change_mode()
+                        scatter_duration = 0
+                        scatter = False
+                    else:
+                        scatter_duration += 1
+                else:
+                    if chase_duration == 300:
+                        maze_data.blinky.change_mode()
+                        maze_data.pinky.change_mode()
+                        maze_data.inky.change_mode()
+                        maze_data.clyde.change_mode()
+                        chase_duration = 0
+                        scatter = True
+                    else:
+                        chase_duration += 1
+                maze_data.blinky.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
+                maze_data.inky.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
+                maze_data.pinky.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
+                maze_data.clyde.pixel_move(stopper, screen, maze_data.maze, maze_data.pacman.current_location)
+                maze_data.pacman.pixel_move(CURRENT_DIRECTION, booster, screen, maze_data.maze)
         elif current_state == "PAUSE":
             pause.draw_pausemenu()
         frames += 1

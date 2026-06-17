@@ -2,6 +2,7 @@ from codebase.back_end.Ghost import Ghost
 from random import choice
 from codebase.back_end.Maze import Constants
 import pygame
+import math
 
 
 class Blinky(Ghost):
@@ -40,7 +41,7 @@ class Blinky(Ghost):
         self.blinky_img = pygame.transform.scale(self.blinky_img, (constants.cell_size - 2, constants.cell_size - 2))
         self.blinky_mask = pygame.mask.from_surface(self.blinky_img)
         self.distance_completed = 0
-        self.speed = constants.cell_size // 10
+        self.speed = self.cell_size // 12
         self.speed_dead = constants.cell_size // 3
         self.speed_frightened = constants.cell_size // 16
 
@@ -49,11 +50,8 @@ class Blinky(Ghost):
         self,
         target_location: tuple[int, int],
         maze: list[list[int]]) -> None:
-
-        target = target_location
-        current_cell = maze[self.current_location[1]][self.current_location[0]]
-
-        direction = self.choose_the_path(target, current_cell, len(maze), len(maze[0]))
+        print(f"Target: {target_location}, Location: {self.current_location}")
+        direction = self.bfs_next_direction(target_location, self.current_location, maze, len(maze), len(maze[0]))
 
         self.offset(direction)
 

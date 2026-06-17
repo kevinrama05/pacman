@@ -86,11 +86,6 @@ class Maze:
         self.pacgums_eaten = {}
         self.levels = self.configs['levels']
         self.current_level = 1
-        self.modes_duration = {
-            'level_1': [6, 15, 6, 15, 6, -1],
-            'level_2_5': [5, 17, 5, 17, 5, -1],
-            'level_5+': [4, 18, 4, 18, 4, -1]
-        }
         self.lives = self.configs['lives']
 
     def place_pacgums(self) -> None:
@@ -127,5 +122,59 @@ class Maze:
         self.pacgums_eaten[(self.width - 1, self.height - 1)] = False
         self.pacgums_eaten[(0, self.height - 1)] = False
 
-    def collision(self) -> None:
-        ...
+    def collision(self) -> bool:
+        def circles_collide(rect1: pygame.Rect, rect2: pygame.Rect) -> bool:
+            radius1 = rect1.width / 2
+            radius2 = rect2.width / 2
+            dx = rect1.centerx - rect2.centerx
+            dy = rect1.centery - rect2.centery
+            return dx * dx + dy * dy <= (radius1 + radius2) ** 2
+        pacman_rect = pygame.Rect(self.pacman.pacman_x + 2, self.pacman.pacman_y + 2, self.constants.cell_size - 4, self.constants.cell_size - 4)
+        blinky_rect = pygame.Rect(self.blinky.blinky_x + 2, self.blinky.blinky_y + 2, self.constants.cell_size - 4, self.constants.cell_size - 4)
+        pinky_rect = pygame.Rect(self.pinky.pinky_x + 2, self.pinky.pinky_y + 2, self.constants.cell_size - 4, self.constants.cell_size - 4)
+        inky_rect = pygame.Rect(self.inky.inky_x + 2, self.inky.inky_y + 2, self.constants.cell_size - 4, self.constants.cell_size - 4)
+        clyde_rect = pygame.Rect(self.clyde.clyde_x + 2, self.clyde.clyde_y + 2, self.constants.cell_size - 4, self.constants.cell_size)
+
+        for i in (blinky_rect, pinky_rect, inky_rect, clyde_rect):
+            if circles_collide(pacman_rect, i):
+                return True
+        return False
+    
+    def reset(self) -> None:
+        pacman_position_y = int(int(self.height - 5) / 2 + 1)
+        pacman_position_x = int(int(self.width - 7) / 2 + 2)
+        self.pacman.current_location = (pacman_position_x, pacman_position_y)
+        self.pacman.lives -= 1
+        self.direction = 'N'
+        self.frame = 1
+        self.pacman.pacman_x = self.constants.start_x + pacman_position_x * self.constants.cell_size
+        self.pacman.pacman_y = self.constants.start_y + pacman_position_y * self.constants.cell_size
+        self.pacman.distance_completed = 0
+
+        self.blinky.current_location = self.blinky.origin
+        self.blinky.direction = 'S'
+        x, y = self.blinky.current_location
+        self.blinky.blinky_x = self.constants.start_x + x * self.constants.cell_size
+        self.blinky.blinky_y = self.constants.start_y + y * self.constants.cell_size
+        self.blinky.distance_completed = 0
+
+        self.pinky.current_location = self.pinky.origin
+        self.pinky.direction = 'S'
+        x, y = self.pinky.current_location
+        self.pinky.pinky_x = self.constants.start_x + x * self.constants.cell_size
+        self.pinky.pinky_y = self.constants.start_y + y * self.constants.cell_size
+        self.pinky.distance_completed = 0
+
+        self.inky.current_location = self.inky.origin
+        self.inky.direction = 'N'
+        x, y = self.inky.current_location
+        self.inky.inky_x = self.constants.start_x + x * self.constants.cell_size
+        self.inky.inky_y = self.constants.start_y + y * self.constants.cell_size
+        self.inky.distance_completed = 0
+
+        self.clyde.current_location = self.clyde.origin
+        self.clyde.direction = 'S'
+        x, y = self.clyde.current_location
+        self.clyde.clyde_x = self.constants.start_x + x * self.constants.cell_size
+        self.clyde.clyde_y = self.constants.start_y + y * self.constants.cell_size
+        self.clyde.distance_completed = 0
